@@ -1,11 +1,13 @@
 import 'package:http/http.dart' as http;
 import 'base_service.dart';
 import '../models/post.dart';
+import 'package:flutter/foundation.dart';
 
 class PostService extends BaseService {
   PostService({http.Client? client}) : super(client: client);
 
   Future<List<Post>> fetchPosts() async {
+    debugPrint('HTTP CALL → PostService.fetchPosts()');
     final res = await client
         .get(url('/posts'))
         .timeout(const Duration(seconds: 12));
