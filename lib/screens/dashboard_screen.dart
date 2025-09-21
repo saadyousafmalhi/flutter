@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/post_provider.dart';
 import '../providers/user_provider.dart';
+import 'cheatsheet_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -67,6 +68,24 @@ class _DashboardScreenState extends State<DashboardScreen>
           // Both providers have data
           return ListView(
             children: [
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.menu_book_outlined),
+                  title: const Text('Interview Cheat Sheet'),
+                  subtitle: const Text(
+                    'Quick revision of concepts used in this app',
+                  ),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const CheatSheetScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const Divider(height: 0),
+
               ListTile(title: Text('Posts: ${posts.items.length}')),
               ListTile(title: Text('Users: ${users.items.length}')),
             ],
