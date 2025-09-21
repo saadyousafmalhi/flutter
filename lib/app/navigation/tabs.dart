@@ -2,7 +2,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+// Providers
 import '../../providers/auth_provider.dart';
+import '../../providers/theme_provider.dart';
+
+// Screens
 import '../../screens/dashboard_screen.dart';
 import '../../screens/post_list_screen.dart';
 import '../../screens/user_list_screen.dart';
@@ -49,6 +53,20 @@ class _HomeTabsState extends State<HomeTabs> {
         appBar: AppBar(
           title: Text('Home${userId != null ? " — $userId" : ""}'),
           actions: [
+            PopupMenuButton<String>(
+              tooltip: 'Theme',
+              onSelected: (v) {
+                final tp = context.read<ThemeProvider>();
+                if (v == 'light') tp.set(ThemeMode.light);
+                if (v == 'dark') tp.set(ThemeMode.dark);
+                if (v == 'system') tp.set(ThemeMode.system);
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(value: 'light', child: Text('Light')),
+                PopupMenuItem(value: 'dark', child: Text('Dark')),
+                PopupMenuItem(value: 'system', child: Text('System (auto)')),
+              ],
+            ),
             IconButton(
               tooltip: 'Logout',
               icon: const Icon(Icons.logout),

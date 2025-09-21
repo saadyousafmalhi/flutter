@@ -5,6 +5,7 @@ import 'app/app_theme.dart';
 import 'app/root_gate.dart'; // <-- decides LoginScreen vs HomeTabs
 
 // Providers
+import 'providers/theme_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/post_provider.dart';
 import 'providers/user_provider.dart';
@@ -26,16 +27,22 @@ class AppRoot extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()..load()),
         ChangeNotifierProvider(
           create: (_) => AuthProvider(AuthServiceFake()),
         ), // or AuthServiceHttp()
         ChangeNotifierProvider(create: (_) => PostProvider(PostServiceHttp())),
         ChangeNotifierProvider(create: (_) => UserProvider(UserServiceHttp())),
       ],
-      child: MaterialApp(
-        title: 'Interview App',
-        theme: appTheme(),
-        home: const RootGate(), // <-- not HomeTabs directly anymore
+      child: Consumer<ThemeProvider>(
+        builder: (_, theme, __) => MaterialApp(
+          title: 'Interview App',
+          debugShowCheckedModeBanner: false,
+          theme: appTheme(),
+          darkTheme: appDarkTheme(),
+          themeMode: theme.mode,
+          home: const RootGate(),
+        ),
       ),
     );
   }
