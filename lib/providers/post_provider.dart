@@ -19,7 +19,7 @@ class PostProvider extends ChangeNotifier {
   bool get hasData => _items.isNotEmpty;
 
   Future<void> load({bool force = false}) async {
-    if (_initialized && !force) return; // simple cache
+    if (_initialized && !force) return;
     _initialized = true;
     _loading = true;
     _error = null;
