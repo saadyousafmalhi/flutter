@@ -2,16 +2,15 @@ name: Android Release (APK & AAB)
 
 on:
   push:
-    branches: [ main ]     # build on main merges
-    tags:    [ 'v*' ]      # build when you push tags like v1.0.0+2
-  workflow_dispatch:        # allow manual runs
+    branches: [ main ]     # build on merges to main
+    tags:    [ 'v*' ]      # and on version tags like v1.0.0+2
+  workflow_dispatch:        # allow manual runs from the Actions tab
 
 jobs:
   build-android:
     runs-on: ubuntu-latest
     env:
       JAVA_VERSION: '17'
-      ANDROID_SDK_ROOT: /usr/local/android-sdk
 
     steps:
       - name: Checkout
@@ -29,18 +28,30 @@ jobs:
           channel: stable
           cache: true
 
+      # Installs Android SDK, cmdline-tools, accepts licenses, and adds sdkmanager to PATH
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: latest
+          packages: |
+            platform-tools
+            platforms;android-34
+            build-tools;34.0.0
+            # If Gradle requires NDK, also include:
+            # ndk;27.0.12077973
+
       - name: Pub get
         run: flutter pub get
 
-      - name: Android SDK
-        run: |
-          sudo mkdir -p $ANDROID_SDK_ROOT && sudo chown -R $USER:$USER $ANDROID_SDK_ROOT
-          yes | sdkmanager --licenses || true
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "cmdline-tools;latest"
-          # If your gradle requires NDK, uncomment and match version:
-          # sdkmanager "ndk;27.0.12077973"
+      - name: Analyze
+        run: flutter analyze
 
+      - name: Tests
+        run: flutter test --no-pub
+
+      # Recreate your upload keystore and key.properties from GitHub Secrets
       - name: Restore keystore & write key.properties
+        shell: bash
         run: |
           echo "${{ secrets.ANDROID_UPLOAD_KEYSTORE_B64 }}" | base64 -d > $HOME/flutter-upload.jks
           cat > android/key.properties <<EOF
@@ -49,13 +60,7 @@ jobs:
           keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
           storeFile=$HOME/flutter-upload.jks
           EOF
-          echo "key.properties written (values hidden)"
-
-      - name: Analyze
-        run: flutter analyze
-
-      - name: Tests
-        run: flutter test --no-pub
+          echo "key.properties written (values redacted)"
 
       - name: Build AAB (release, arm64)
         run: flutter build appbundle --release --target-platform android-arm64
@@ -71,6 +76,7 @@ jobs:
             build/app/outputs/bundle/release/*.aab
             build/app/outputs/flutter-apk/*.apk
 
+  # On tags like v1.0.0+N, also publish a GitHub Release with the artifacts attached
   release:
     needs: build-android
     if: startsWith(github.ref, 'refs/tags/v')
