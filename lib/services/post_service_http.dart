@@ -10,9 +10,7 @@ class PostServiceHttp extends BaseService implements PostService {
   @override
   Future<List<Post>> fetchPosts() async {
     debugPrint('HTTP CALL → PostServiceHttp.fetchPosts()');
-    final res = await client
-        .get(url('/posts'))
-        .timeout(const Duration(seconds: 12));
+    final res = await get(url('/posts')).timeout(const Duration(seconds: 12));
     throwOnError(res);
     final data = decodeJson<List>(res);
     return data.map((e) => Post.fromJson(e)).toList();
