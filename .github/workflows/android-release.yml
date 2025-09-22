@@ -37,8 +37,6 @@ jobs:
             platform-tools
             platforms;android-34
             build-tools;34.0.0
-            # If Gradle requires NDK, also include:
-            # ndk;27.0.12077973
 
       - name: Pub get
         run: flutter pub get
