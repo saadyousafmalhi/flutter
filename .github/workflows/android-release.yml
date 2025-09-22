@@ -1,0 +1,97 @@
+name: Android Release (APK & AAB)
+
+on:
+  push:
+    branches: [ main ]     # build on merges to main
+    tags:    [ 'v*' ]      # and on version tags like v1.0.0+2
+  workflow_dispatch:        # allow manual runs from the Actions tab
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    env:
+      JAVA_VERSION: '17'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # Installs Android SDK, cmdline-tools, accepts licenses, and adds sdkmanager to PATH
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: latest
+          packages: |
+            platform-tools
+            platforms;android-34
+            build-tools;34.0.0
+
+      - name: Pub get
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Tests
+        run: flutter test --no-pub
+
+      # Recreate your upload keystore and key.properties from GitHub Secrets
+      - name: Restore keystore & write key.properties
+        shell: bash
+        run: |
+          echo "${{ secrets.ANDROID_UPLOAD_KEYSTORE_B64 }}" | base64 -d > $HOME/flutter-upload.jks
+          cat > android/key.properties <<EOF
+          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
+          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
+          storeFile=$HOME/flutter-upload.jks
+          EOF
+          echo "key.properties written (values redacted)"
+
+      - name: Build AAB (release, arm64)
+        run: flutter build appbundle --release --target-platform android-arm64
+
+      - name: Build APK (release, arm64)
+        run: flutter build apk --release --target-platform android-arm64
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-artifacts
+          path: |
+            build/app/outputs/bundle/release/*.aab
+            build/app/outputs/flutter-apk/*.apk
+
+  # On tags like v1.0.0+N, also publish a GitHub Release with the artifacts attached
+  release:
+    needs: build-android
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: android-artifacts
+          path: ./dist
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.aab
+            dist/*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

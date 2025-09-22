@@ -7,6 +7,14 @@ abstract class BaseService {
   static const String baseUrl = 'https://jsonplaceholder.typicode.com';
   final http.Client client;
 
+  Map<String, String> get _defaultHeaders => const {
+    'Accept': 'application/json',
+    'User-Agent': 'InterviewApp/1.0 (Flutter; Android)',
+  };
+
+  Future<http.Response> get(Uri uri) =>
+      client.get(uri, headers: _defaultHeaders);
+
   Uri url(String path) => Uri.parse('$baseUrl$path');
 
   T decodeJson<T>(http.Response res) => json.decode(res.body) as T;

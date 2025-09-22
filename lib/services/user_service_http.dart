@@ -10,9 +10,7 @@ class UserServiceHttp extends BaseService implements UserService {
   @override
   Future<List<User>> fetchUsers() async {
     debugPrint('HTTP CALL → UserServiceHttp.fetchUsers()');
-    final res = await client
-        .get(url('/users'))
-        .timeout(const Duration(seconds: 12));
+    final res = await get(url('/users')).timeout(const Duration(seconds: 12));
     throwOnError(res);
     final data = decodeJson<List>(res);
     return data.map((e) => User.fromJson(e)).toList();
