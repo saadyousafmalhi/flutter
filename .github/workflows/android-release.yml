@@ -28,15 +28,41 @@ jobs:
           channel: stable
           cache: true
 
-      # Installs Android SDK, cmdline-tools, accepts licenses, and adds sdkmanager to PATH
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          cmdline-tools-version: latest
-          packages: |
-            platform-tools
-            platforms;android-34
-            build-tools;34.0.0
+- name: Install Android cmdline-tools & packages (manual)
+  shell: bash
+  env:
+    ANDROID_SDK_ROOT: /usr/local/android-sdk
+  run: |
+    set -euxo pipefail
+
+    # Create SDK dir and own it
+    sudo mkdir -p "$ANDROID_SDK_ROOT"
+    sudo chown -R "$USER":"$USER" "$ANDROID_SDK_ROOT"
+
+    # Download official commandline-tools (Linux)
+    curl -L -o /tmp/cmdtools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+
+    # Unzip to expected 'latest' path
+    mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
+    unzip -q /tmp/cmdtools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
+    mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+
+    # Put sdkmanager/avdmanager etc on PATH
+    export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
+
+    # Accept licenses (non-fatal if none yet)
+    yes | sdkmanager --licenses || true
+
+    # Try installing API 34; if it flakes, fall back to API 33
+    if ! sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0"; then
+      echo "API 34 not available, falling back to API 33"
+      sdkmanager --install "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+    fi
+
+    # Show a brief list for debugging
+    sdkmanager --list | head -n 50
+
+
 
       - name: Pub get
         run: flutter pub get
