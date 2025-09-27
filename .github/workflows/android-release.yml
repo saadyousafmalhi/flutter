@@ -1,5 +1,8 @@
 name: Android Release (APK & AAB)
 
+permissions:
+  contents: write
+
 on:
   push:
     branches: [ main ]
@@ -94,6 +97,9 @@ jobs:
         with:
           name: android-artifacts
           path: ./dist
+
+      - name: List downloaded files (debug)
+      run: ls -R ./dist
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
