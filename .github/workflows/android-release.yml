@@ -37,8 +37,7 @@ jobs:
           set -euxo pipefail
           sudo mkdir -p "$ANDROID_SDK_ROOT"
           sudo chown -R "$USER:$USER" "$ANDROID_SDK_ROOT"
-          curl -L -o /tmp/cmdtools.zip 
-https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          curl -L -o /tmp/cmdtools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
           mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
           unzip -q /tmp/cmdtools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
           mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
