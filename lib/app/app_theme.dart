@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 ThemeData _baseTheme(Color seed, Brightness brightness) {
-  final scheme = ColorScheme.fromSeed(seedColor: seed, brightness: brightness);
+  final scheme = ColorScheme.fromSeed(seedColor: seed, brightness: brightness)
+      .copyWith(
+        secondary: const Color(0xFFFF7043), // Orange accent
+      );
 
   return ThemeData(
     useMaterial3: true,
@@ -34,7 +37,10 @@ ThemeData _baseTheme(Color seed, Brightness brightness) {
   );
 }
 
-ThemeData appTheme({Color seed = const Color(0xFF4F46E5)}) =>
+/// Light theme for Iradon
+ThemeData appTheme({Color seed = const Color(0xFF00897B)}) =>
     _baseTheme(seed, Brightness.light);
-ThemeData appDarkTheme({Color seed = const Color(0xFF4F46E5)}) =>
+
+/// Dark theme for Iradon
+ThemeData appDarkTheme({Color seed = const Color(0xFF00897B)}) =>
     _baseTheme(seed, Brightness.dark);

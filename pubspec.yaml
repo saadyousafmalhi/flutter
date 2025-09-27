@@ -1,5 +1,5 @@
-name: my_first_app
-description: "A new Flutter project."
+name: iradon
+description: "Iradon — a modern productivity app for managing tasks, goals, and intentions with a clean architecture and CI/CD pipeline."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -40,6 +40,7 @@ dependencies:
   http: ^1.5.0
 
 dev_dependencies:
+  flutter_native_splash: ^2.4.1
   flutter_test:
     sdk: flutter
 
@@ -50,6 +51,17 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
 
+flutter_native_splash:
+  color: "#00897B"          # teal brand color
+  image: assets/icon/iradon_icon.png
+  android: true
+  ios: true
+  web: true
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/iradon_icon.png"
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 

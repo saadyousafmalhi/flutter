@@ -1,16 +1,76 @@
-# my_first_app
+# 📱 Iradon
+![CI](https://github.com/<your-username>/<your-repo>/actions/workflows/ci.yml/badge.svg)
+![Release](https://github.com/<your-username>/<your-repo>/actions/workflows/android-release.yml/badge.svg)
 
-A new Flutter project.
+**Iradon** — a modern productivity app built with Flutter.  
+Manage tasks, goals, and intentions with **clean architecture, Material 3 theming, and automated CI/CD pipelines**.
 
-## Getting Started
+👉 [Download the latest APK](https://github.com/<your-username>/<your-repo>/releases/latest)
 
-This project is a starting point for a Flutter application.
+---
 
-A few resources to get you started if this is your first Flutter project:
+## ✨ Features
+- 🔐 **Authentication** with persisted sessions (login/logout flow)
+- ✅ **Task Feed** (list view, pull-to-refresh, error handling)
+- 🎨 **Material 3 Theming** with brand colors (teal/orange) & light/dark mode
+- 📖 **Knowledge Base** (help screen reframed from cheat sheet)
+- 💾 **Persistence** with SharedPreferences (remembers user state & theme)
+- ⚡ **CI/CD** with GitHub Actions (signed APK/AAB published on every tagged release)
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+---
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 📸 Screenshots
+*(Add real screenshots/GIFs here from `/docs/assets/`)*
+
+<p align="center">
+  <img src="docs/assets/login.png" alt="Login" width="220"/>
+  <img src="docs/assets/tasks.png" alt="Task List" width="220"/>
+  <img src="docs/assets/darkmode.png" alt="Dark Mode" width="220"/>
+</p>
+
+---
+
+## 🏗️ Architecture Overview
+
+
+
+- **State Management:** Provider (AuthProvider, TaskProvider)  
+- **Persistence:** SharedPreferences  
+- **UI:** Material 3, theming with ColorScheme.fromSeed  
+- **Navigation:** RootGate + persistent tabs with AutomaticKeepAliveClientMixin  
+
+---
+
+## 🛠️ Tech Stack
+- [Flutter](https://flutter.dev/) (3.x, Material 3)
+- [Provider](https://pub.dev/packages/provider) for state management
+- [SharedPreferences](https://pub.dev/packages/shared_preferences) for persistence
+- [GitHub Actions](https://github.com/features/actions) for CI/CD
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- [Flutter SDK](https://docs.flutter.dev/get-started/install)
+- Android Studio / Xcode (emulator or real device)
+
+### Run locally
+```bash
+flutter pub get
+flutter run
+
+## 🏗️ Build Release
+
+```bash
+flutter build apk --release
+flutter build appbundle --release
+
+##🔄 CI/CD
+
+CI Workflow → Runs analyzer + tests on every push
+
+CD Workflow → On main or when tagging v*, builds signed APK & AAB and attaches them to GitHub Releases
+
+## 📜 License
+This project is licensed under the MIT License.
