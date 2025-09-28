@@ -67,12 +67,13 @@ flutter run
 ```bash
 flutter build apk --release
 flutter build appbundle --release
+```
 
-##🔄 CI/CD
+## 🔄 CI/CD
 
 CI Workflow → Runs analyzer + tests on every push
 
 CD Workflow → On main or when tagging v*, builds signed APK & AAB and attaches them to GitHub Releases
 
 ## 📜 License
-This project is licensed under the MIT License.
+Licensed under the [MIT License](./LICENSE) © 2025 Saad Yousaf.
