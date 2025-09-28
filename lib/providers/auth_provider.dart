@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
 import '../services/token_source.dart';
 import '../services/base_service.dart' show ApiException;
+import 'dart:convert';
 
 class AuthProvider extends ChangeNotifier implements TokenSource {
   final AuthService _service;
@@ -17,11 +18,28 @@ class AuthProvider extends ChangeNotifier implements TokenSource {
   String? _token;
   DateTime? _expiresAt;
   bool _initialized = false;
+  String? _email;
 
   bool get isLoggedIn => _isLoggedIn;
   bool get loading => _loading;
   String? get error => _error;
   String? get userId => _userId;
+  String? get email => _email;
+  String get displayName => _email ?? _userId ?? 'User';
+
+  String? _emailFromToken(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+      final payload = utf8.decode(
+        base64Url.decode(base64Url.normalize(parts[1])),
+      );
+      final map = json.decode(payload) as Map<String, dynamic>;
+      return map['email'] as String?;
+    } catch (_) {
+      return null;
+    }
+  }
 
   @override
   String? get token => _token;
@@ -41,6 +59,7 @@ class AuthProvider extends ChangeNotifier implements TokenSource {
         _isLoggedIn = persisted;
         _userId = prefs.getString('userId');
         _token = prefs.getString('token');
+        _email ??= (_token != null) ? _emailFromToken(_token!) : null;
         final exp = prefs.getString('expiresAt');
         _expiresAt = exp != null ? DateTime.tryParse(exp) : null;
       }
@@ -90,6 +109,7 @@ class AuthProvider extends ChangeNotifier implements TokenSource {
       _isLoggedIn = true;
       _userId = res.userId;
       _token = res.token;
+      _email = _emailFromToken(_token!);
       _expiresAt = res.expiresAt;
 
       // Persist only if rememberMe

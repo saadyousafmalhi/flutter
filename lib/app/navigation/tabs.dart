@@ -36,9 +36,8 @@ class _HomeTabsState extends State<HomeTabs> {
 
   @override
   Widget build(BuildContext context) {
-    // Only the AppBar title depends on userId; this avoids rebuilding the whole widget.
-    final userId = context.select<AuthProvider, String?>((a) => a.userId);
-
+    // Only the AppBar title depends on identity (email > uid) to avoid full rebuilds.
+    final who = context.select<AuthProvider, String>((a) => a.displayName);
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
@@ -53,7 +52,10 @@ class _HomeTabsState extends State<HomeTabs> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text('Home${userId != null ? " — $userId" : ""}'),
+          title: Text(
+            'Home — $who',
+            overflow: TextOverflow.ellipsis, // long emails won't overflow
+          ),
           actions: [
             PopupMenuButton<String>(
               tooltip: 'Theme',
