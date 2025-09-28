@@ -1,21 +1,40 @@
+// lib/services/base_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 abstract class BaseService {
-  BaseService({http.Client? client}) : client = client ?? http.Client();
+  BaseService({http.Client? client, String? base})
+    : client = client ?? http.Client(),
+      base = base ?? 'https://jsonplaceholder.typicode.com';
 
-  static const String baseUrl = 'https://jsonplaceholder.typicode.com';
+  /// Per-service base URL (JSONPlaceholder by default).
+  final String base;
+
   final http.Client client;
 
-  Map<String, String> get _defaultHeaders => const {
+  /// Default headers for all requests; services can override/extend.
+  Map<String, String> get defaultHeaders => const {
     'Accept': 'application/json',
     'User-Agent': 'InterviewApp/1.0 (Flutter; Android)',
   };
 
-  Future<http.Response> get(Uri uri) =>
-      client.get(uri, headers: _defaultHeaders);
+  Future<http.Response> get(Uri uri, {Map<String, String>? headers}) {
+    return client.get(
+      uri,
+      headers: {...defaultHeaders, if (headers != null) ...headers},
+    );
+  }
 
-  Uri url(String path) => Uri.parse('$baseUrl$path');
+  /// Build URL relative to this service's base, with optional query params.
+  Uri url(String path, {Map<String, String>? query}) {
+    final baseUri = Uri.parse(base);
+    return Uri(
+      scheme: baseUri.scheme,
+      host: baseUri.host,
+      path: '${baseUri.path}${path.startsWith('/') ? path : '/$path'}',
+      queryParameters: query,
+    );
+  }
 
   T decodeJson<T>(http.Response res) => json.decode(res.body) as T;
 
@@ -24,7 +43,11 @@ abstract class BaseService {
     Object? body,
     Map<String, String>? headers,
   }) {
-    return client.patch(uri, headers: headers, body: body);
+    return client.patch(
+      uri,
+      headers: {...defaultHeaders, if (headers != null) ...headers},
+      body: body,
+    );
   }
 
   void throwOnError(http.Response res) {
