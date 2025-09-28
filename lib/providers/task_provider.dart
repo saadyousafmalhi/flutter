@@ -152,4 +152,75 @@ class TaskProvider extends ChangeNotifier {
       _syncing = false;
     }
   }
+
+  // Helper to persist list locally (works with your LocalTaskStore)
+  Future<void> _persist() async {
+    try {
+      await _store.saveTasks(_items);
+    } catch (_) {
+      // ignore local persistence errors; UI already updated
+    }
+  }
+
+  /// Create a task (optimistic placeholder + rollback on failure)
+  Future<Task?> addTask(String title) async {
+    debugPrint('PROVIDER → TaskProvider.addTask("$title")');
+
+    // 1) Optimistic placeholder with a negative temp id to avoid collisions
+    final tempId = -DateTime.now().millisecondsSinceEpoch;
+    final temp = Task(id: tempId, title: title, done: false);
+    _items = [temp, ..._items];
+    await _persist();
+    notifyListeners();
+
+    try {
+      // 2) Server create (Supabase returns the row with a real id)
+      final created = await _service.create(title);
+
+      // 3) Replace placeholder with real row
+      final idx = _items.indexWhere((t) => t.id == tempId);
+      if (idx >= 0) {
+        _items = List.of(_items)..[idx] = created;
+      } else {
+        // (very unlikely) placeholder missing—prepend the created row
+        _items = [created, ..._items];
+      }
+      _error = null;
+      await _persist();
+      notifyListeners();
+      return created;
+    } catch (e) {
+      // 4) Rollback on failure
+      _items = _items.where((t) => t.id != tempId).toList(growable: false);
+      _error = e.toString();
+      await _persist();
+      notifyListeners();
+      return null;
+    }
+  }
+
+  /// Delete a task (optimistic remove + rollback on failure)
+  Future<void> removeTask(int id) async {
+    debugPrint('PROVIDER → TaskProvider.removeTask($id)');
+
+    // 1) Optimistic remove
+    final i = _items.indexWhere((t) => t.id == id);
+    if (i < 0) return;
+    final removed = _items[i];
+    _items = List.of(_items)..removeAt(i);
+    await _persist();
+    notifyListeners();
+
+    try {
+      // 2) Server delete
+      await _service.delete(id);
+      _error = null;
+    } catch (e) {
+      // 3) Rollback on failure (insert back at original index)
+      _items = List.of(_items)..insert(i, removed);
+      _error = e.toString();
+      await _persist();
+      notifyListeners();
+    }
+  }
 }

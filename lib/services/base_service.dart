@@ -50,6 +50,28 @@ abstract class BaseService {
     );
   }
 
+  Future<http.Response> post(
+    Uri uri, {
+    Object? body,
+    Map<String, String>? headers,
+  }) {
+    return client.post(
+      uri,
+      headers: {...defaultHeaders, if (headers != null) ...headers},
+      body: body,
+    );
+  }
+
+  Future<http.Response> deleteReq(Uri uri, {Map<String, String>? headers}) {
+    return client.delete(
+      uri,
+      headers: {
+        ...defaultHeaders, // or _defaultHeaders in your file
+        if (headers != null) ...headers,
+      },
+    );
+  }
+
   void throwOnError(http.Response res) {
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw ApiException(
