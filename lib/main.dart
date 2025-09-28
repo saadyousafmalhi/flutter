@@ -16,9 +16,10 @@ import 'providers/task_provider.dart';
 import 'services/post_service_http.dart';
 import 'services/user_service_http.dart';
 import 'services/task_service_http.dart';
+import 'services/supabase_auth_http.dart';
 
 // (Optional) fake auth for local dev/tests
-import 'services/auth_service_fake.dart';
+//import 'services/auth_service_fake.dart';
 
 void main() => runApp(const AppRoot());
 
@@ -31,11 +32,19 @@ class AppRoot extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => ThemeProvider()..load()),
         ChangeNotifierProvider(
-          create: (_) => AuthProvider(AuthServiceFake()),
-        ), // or AuthServiceHttp()
+          create: (_) => AuthProvider(SupabaseAuthHttp())..checkLoginStatus(),
+        ),
         ChangeNotifierProvider(create: (_) => PostProvider(PostServiceHttp())),
         ChangeNotifierProvider(create: (_) => UserProvider(UserServiceHttp())),
-        ChangeNotifierProvider(create: (_) => TaskProvider(TaskServiceHttp())),
+        ChangeNotifierProvider(
+          create: (ctx) {
+            final auth = ctx.read<AuthProvider>(); // TokenSource
+            return TaskProvider(
+              TaskServiceHttp(tokens: auth), // reads token via getter
+              // LocalTaskStore(), // include if your provider expects it
+            );
+          },
+        ),
       ],
       child: Consumer<ThemeProvider>(
         builder: (_, theme, __) => MaterialApp(

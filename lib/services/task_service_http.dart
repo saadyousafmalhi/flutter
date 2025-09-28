@@ -6,15 +6,19 @@ import 'base_service.dart';
 import '../models/task.dart';
 import 'task_service.dart';
 import '../config/supabase_config.dart';
+import 'token_source.dart';
 
 class TaskServiceHttp extends BaseService implements TaskService {
-  TaskServiceHttp({super.client}) : super(base: kSupabaseRestUrl);
+  final TokenSource _tokens;
 
+  TaskServiceHttp({super.client, required TokenSource tokens})
+    : _tokens = tokens,
+      super(base: kSupabaseRestUrl);
   @override
   Map<String, String> get defaultHeaders => {
     ...super.defaultHeaders,
     'apikey': kSupabaseAnonKey,
-    'Authorization': 'Bearer $kSupabaseAnonKey',
+    'Authorization': 'Bearer ${_tokens.token ?? kSupabaseAnonKey}',
   };
 
   @override

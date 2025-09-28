@@ -1,8 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
+import '../services/token_source.dart';
 
-class AuthProvider extends ChangeNotifier {
+class AuthProvider extends ChangeNotifier implements TokenSource {
   final AuthService _service;
   AuthProvider(this._service) {
     debugPrint('AuthProvider created');
@@ -20,6 +21,9 @@ class AuthProvider extends ChangeNotifier {
   bool get loading => _loading;
   String? get error => _error;
   String? get userId => _userId;
+
+  @override
+  String? get token => _token;
 
   Future<void> checkLoginStatus({bool force = false}) async {
     if (_initialized && !force) return;
