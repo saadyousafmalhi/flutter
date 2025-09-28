@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'app/app_theme.dart';
 import 'app/root_gate.dart'; // <-- decides LoginScreen vs HomeTabs
+import 'app/root_scaffold_messenger.dart';
 
 // Providers
 import 'providers/theme_provider.dart';
@@ -50,6 +51,7 @@ class AppRoot extends StatelessWidget {
         builder: (_, theme, __) => MaterialApp(
           title: 'Interview App',
           debugShowCheckedModeBanner: false,
+          scaffoldMessengerKey: rootScaffoldMessengerKey,
           theme: appTheme(),
           darkTheme: appDarkTheme(),
           themeMode: theme.mode,

@@ -1,3 +1,4 @@
+import '../app/root_scaffold_messenger.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
@@ -33,10 +34,13 @@ class _LoginScreenState extends State<LoginScreen> {
       password: _passwordCtrl.text,
       rememberMe: _rememberMe,
     );
-    if (!ok && mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Invalid credentials')));
+    if (!ok) {
+      final msg = auth.error ?? 'Invalid email or password';
+      final m = rootScaffoldMessengerKey.currentState;
+      m
+        ?..clearSnackBars()
+        ..showSnackBar(SnackBar(content: Text(msg)));
+      return;
     }
     // RootGate will rebuild automatically via Provider and show HomeTabs.
   }

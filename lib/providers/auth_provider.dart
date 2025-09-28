@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
 import '../services/token_source.dart';
+import '../services/base_service.dart' show ApiException;
 
 class AuthProvider extends ChangeNotifier implements TokenSource {
   final AuthService _service;
@@ -110,7 +111,12 @@ class AuthProvider extends ChangeNotifier implements TokenSource {
       return true;
     } catch (e) {
       // 3) Error path
-      _error = e.toString();
+      if (e is ApiException && (e.statusCode == 400 || e.statusCode == 401)) {
+        _error = 'Invalid email or password';
+      } else {
+        _error = 'Sign-in failed. Please try again.';
+        debugPrint('[AuthProvider] login() ERROR: $e');
+      }
       _isLoggedIn = false;
       _userId = null;
       _token = null;
