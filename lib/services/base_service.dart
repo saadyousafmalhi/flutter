@@ -19,6 +19,14 @@ abstract class BaseService {
 
   T decodeJson<T>(http.Response res) => json.decode(res.body) as T;
 
+  Future<http.Response> patch(
+    Uri uri, {
+    Object? body,
+    Map<String, String>? headers,
+  }) {
+    return client.patch(uri, headers: headers, body: body);
+  }
+
   void throwOnError(http.Response res) {
     if (res.statusCode < 200 || res.statusCode >= 300) {
       throw ApiException(

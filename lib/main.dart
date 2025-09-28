@@ -9,11 +9,13 @@ import 'providers/theme_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/post_provider.dart';
 import 'providers/user_provider.dart';
+import 'providers/task_provider.dart';
 
 // HTTP implementations
 //import 'services/auth_service_http.dart';
 import 'services/post_service_http.dart';
 import 'services/user_service_http.dart';
+import 'services/task_service_http.dart';
 
 // (Optional) fake auth for local dev/tests
 import 'services/auth_service_fake.dart';
@@ -33,6 +35,7 @@ class AppRoot extends StatelessWidget {
         ), // or AuthServiceHttp()
         ChangeNotifierProvider(create: (_) => PostProvider(PostServiceHttp())),
         ChangeNotifierProvider(create: (_) => UserProvider(UserServiceHttp())),
+        ChangeNotifierProvider(create: (_) => TaskProvider(TaskServiceHttp())),
       ],
       child: Consumer<ThemeProvider>(
         builder: (_, theme, __) => MaterialApp(

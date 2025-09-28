@@ -10,6 +10,7 @@ import '../../providers/theme_provider.dart';
 import '../../screens/dashboard_screen.dart';
 import '../../screens/post_list_screen.dart';
 import '../../screens/user_list_screen.dart';
+import '../../screens/task_list_screen.dart';
 import 'tab_navigator.dart';
 
 class HomeTabs extends StatefulWidget {
@@ -24,6 +25,7 @@ class _HomeTabsState extends State<HomeTabs> {
   late final List<Widget> _roots = [
     DashboardScreen(),
     PostListScreen(),
+    TaskListScreen(),
     UserListScreen(),
   ];
 
@@ -102,6 +104,10 @@ class _HomeTabsState extends State<HomeTabs> {
             NavigationDestination(
               icon: Icon(Icons.article_outlined),
               label: 'Posts',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.article_outlined),
+              label: 'Tasks',
             ),
             NavigationDestination(
               icon: Icon(Icons.people_alt_outlined),
