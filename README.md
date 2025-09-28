@@ -1,6 +1,7 @@
 # 📱 Iradon
 ![CI](https://github.com/saadyousafmalhi/flutter/actions/workflows/ci.yml/badge.svg)
-![Release](https://github.com/saadyousafmalhi/flutter/actions/workflows/android-release.yml/badge.svg)
+[![Release](https://img.shields.io/github/v/release/saadyousafmalhi/flutter)](https://github.com/saadyousafmalhi/flutter/releases/latest)
+
 
 **Iradon** — a modern productivity app built with Flutter.  
 Manage tasks, goals, and intentions with **clean architecture, Material 3 theming, and automated CI/CD pipelines**.
@@ -60,7 +61,7 @@ Manage tasks, goals, and intentions with **clean architecture, Material 3 themin
 ```bash
 flutter pub get
 flutter run
-
+```
 ## 🏗️ Build Release
 
 ```bash
