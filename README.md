@@ -5,7 +5,8 @@
 **Iradon** — a modern productivity app built with Flutter.  
 Manage tasks, goals, and intentions with **clean architecture, Material 3 theming, and automated CI/CD pipelines**.
 
-👉 [Download the latest APK](https://github.com/<your-username>/<your-repo>/releases/latest)
+👉 [Download the latest APK](https://github.com/saadyousafmalhi/flutter/releases/latest)
+
 
 ---
 
@@ -20,7 +21,7 @@ Manage tasks, goals, and intentions with **clean architecture, Material 3 themin
 ---
 
 ## 📸 Screenshots
-*(Add real screenshots/GIFs here from `/docs/assets/`)*
+
 
 <p align="center">
   <img src="docs/assets/login.png" alt="Login" width="220"/>
