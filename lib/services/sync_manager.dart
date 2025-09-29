@@ -212,9 +212,12 @@ class SyncManager {
     required String fromId,
     required String toId,
   }) {
-    return ops
-        .map((p) => p.id == fromId ? p.copyWith(id: toId) : p)
-        .toList(growable: false);
+    // Return a GROWABLE list so removeAt(0) works
+    final out = <PendingOp>[];
+    for (final p in ops) {
+      out.add(p.id == fromId ? p.copyWith(id: toId) : p);
+    }
+    return out; // growable
   }
 
   List<Task> _upsert(List<Task> list, Task t) {

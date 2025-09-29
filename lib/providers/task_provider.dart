@@ -80,7 +80,7 @@ class TaskProvider extends ChangeNotifier {
     }
 
     // 3) Load WAL queue from disk
-    _queue = await _store.loadQueue();
+    _queue = List<PendingOp>.from(await _store.loadQueue());
     debugPrint('PROVIDER → loaded queue=${_queue.length}');
     if (_queue.isNotEmpty) {
       _sync.kick();
@@ -91,13 +91,17 @@ class TaskProvider extends ChangeNotifier {
 
   // === WAL enqueue with compaction ===
   Future<void> _enqueue(PendingOp op) async {
+    // Work on a growable copy to avoid "Unsupported operation: add"
+    var q = List<PendingOp>.from(_queue);
+
     // Compaction rules
     if (op.kind == PendingKind.delete) {
-      final i = _queue.lastIndexWhere(
+      final i = q.lastIndexWhere(
         (e) => e.id == op.id && e.kind == PendingKind.create,
       );
       if (i != -1) {
-        _queue.removeAt(i);
+        q.removeAt(i);
+        _queue = q;
         await _store.saveQueue(_queue);
         _sync.kick();
         return;
@@ -105,23 +109,23 @@ class TaskProvider extends ChangeNotifier {
     }
 
     if (op.kind == PendingKind.toggle) {
-      final i = _queue.lastIndexWhere(
+      final i = q.lastIndexWhere(
         (e) => e.id == op.id && e.kind == PendingKind.create,
       );
       if (i != -1) {
-        final create = _queue[i];
-        _queue[i] = create.copyWith(
-          payload: {...?create.payload, ...?op.payload},
-        );
+        final create = q[i];
+        q[i] = create.copyWith(payload: {...?create.payload, ...?op.payload});
+        _queue = q;
         await _store.saveQueue(_queue);
         _sync.kick();
         return;
       }
-      final j = _queue.lastIndexWhere(
+      final j = q.lastIndexWhere(
         (e) => e.id == op.id && e.kind == PendingKind.toggle,
       );
       if (j != -1) {
-        _queue[j] = _queue[j].copyWith(payload: op.payload);
+        q[j] = q[j].copyWith(payload: op.payload);
+        _queue = q;
         await _store.saveQueue(_queue);
         _sync.kick();
         return;
@@ -129,11 +133,12 @@ class TaskProvider extends ChangeNotifier {
     }
 
     if (op.kind == PendingKind.update) {
-      final i = _queue.lastIndexWhere(
+      final i = q.lastIndexWhere(
         (e) => e.id == op.id && e.kind == PendingKind.update,
       );
       if (i != -1) {
-        _queue[i] = _queue[i].copyWith(payload: op.payload);
+        q[i] = q[i].copyWith(payload: op.payload);
+        _queue = q;
         await _store.saveQueue(_queue);
         _sync.kick();
         return;
@@ -141,7 +146,8 @@ class TaskProvider extends ChangeNotifier {
     }
 
     // default: append
-    _queue.add(op);
+    q.add(op);
+    _queue = q;
     await _store.saveQueue(_queue);
     _sync.kick();
   }
