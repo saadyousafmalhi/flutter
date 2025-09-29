@@ -1,29 +1,33 @@
 // lib/providers/task_provider.dart
 import 'dart:collection';
-import 'dart:math';
 import 'package:flutter/foundation.dart';
+import 'package:uuid/uuid.dart';
 
 import '../models/task.dart';
-import '../models/task_mutation.dart';
-import '../services/task_service.dart';
+import '../models/pending_op.dart';
+import '../services/task_service_http.dart';
 import '../services/local_task_store.dart';
+import '../services/sync_manager.dart';
 
 class TaskProvider extends ChangeNotifier {
-  final TaskService _service;
+  final TaskServiceHttp _service;
   final LocalTaskStore _store;
+  late SyncManager _sync; // injected from main.dart
 
-  TaskProvider(this._service, [LocalTaskStore? store])
-    : _store = store ?? LocalTaskStore();
+  TaskProvider(this._service, this._store);
+
+  void attachSync(SyncManager sync) {
+    _sync = sync;
+  }
 
   bool _initialized = false;
   bool _loading = false;
   String? _error;
   List<Task> _items = const [];
 
-  // Offline-first
-  final Map<int, int> _clocks = <int, int>{}; // taskId -> last logical clock
-  final List<TaskMutation> _queue = <TaskMutation>[];
-  bool _syncing = false;
+  // WAL/queue
+  final _uuid = const Uuid();
+  List<PendingOp> _queue = [];
 
   // Public API
   bool get initialized => _initialized;
@@ -65,162 +69,167 @@ class TaskProvider extends ChangeNotifier {
       notifyListeners();
     }
 
-    // 3) Resume pending mutations (WAL)
-    final raw = await _store.loadMutations();
-    _queue
-      ..clear()
-      ..addAll(raw.map(TaskMutation.fromJson));
-    for (final m in _queue) {
-      _clocks[m.id] = max(_clocks[m.id] ?? 0, m.clock);
+    // 3) Load WAL queue from disk
+    _queue = await _store.loadQueue();
+    debugPrint('PROVIDER → loaded queue=${_queue.length}');
+    if (_queue.isNotEmpty) {
+      _sync.kick();
     }
-    _syncMutations(); // fire & forget
   }
 
   Future<void> refresh() => load(force: true);
 
-  /// UI calls this: `p.toggle(t)`
-  Future<void> toggle(Task task) => toggleDone(task.id);
+  // === WAL enqueue with compaction ===
+  Future<void> _enqueue(PendingOp op) async {
+    // Compaction rules
+    if (op.kind == PendingKind.delete) {
+      final i = _queue.lastIndexWhere(
+        (e) => e.id == op.id && e.kind == PendingKind.create,
+      );
+      if (i != -1) {
+        _queue.removeAt(i);
+        await _store.saveQueue(_queue);
+        _sync.kick();
+        return;
+      }
+    }
 
-  /// Optimistic toggle + durable queue; no flip-back on transient failure
-  Future<void> toggleDone(int id) async {
+    if (op.kind == PendingKind.toggle) {
+      final i = _queue.lastIndexWhere(
+        (e) => e.id == op.id && e.kind == PendingKind.create,
+      );
+      if (i != -1) {
+        final create = _queue[i];
+        _queue[i] = create.copyWith(
+          payload: {...?create.payload, ...?op.payload},
+        );
+        await _store.saveQueue(_queue);
+        _sync.kick();
+        return;
+      }
+      final j = _queue.lastIndexWhere(
+        (e) => e.id == op.id && e.kind == PendingKind.toggle,
+      );
+      if (j != -1) {
+        _queue[j] = _queue[j].copyWith(payload: op.payload);
+        await _store.saveQueue(_queue);
+        _sync.kick();
+        return;
+      }
+    }
+
+    if (op.kind == PendingKind.update) {
+      final i = _queue.lastIndexWhere(
+        (e) => e.id == op.id && e.kind == PendingKind.update,
+      );
+      if (i != -1) {
+        _queue[i] = _queue[i].copyWith(payload: op.payload);
+        await _store.saveQueue(_queue);
+        _sync.kick();
+        return;
+      }
+    }
+
+    // default: append
+    _queue.add(op);
+    await _store.saveQueue(_queue);
+    _sync.kick();
+  }
+
+  // === Public mutations (optimistic + enqueue) ===
+
+  Future<Task?> addTask(String title) async {
+    debugPrint('PROVIDER → TaskProvider.addTask("$title")');
+
+    // Optimistic placeholder
+    final tempId = 'tmp_${_uuid.v4()}';
+    final temp = Task(
+      id: -DateTime.now().millisecondsSinceEpoch,
+      title: title,
+      done: false,
+    );
+    _items = [temp, ..._items];
+    await _store.saveTasks(_items);
+    notifyListeners();
+
+    // Enqueue create
+    await _enqueue(
+      PendingOp(
+        opId: _uuid.v4(),
+        kind: PendingKind.create,
+        id: tempId,
+        payload: {
+          'title': title,
+          'done': false,
+          'updated_at': DateTime.now().toIso8601String(),
+        },
+        ts: DateTime.now(),
+      ),
+    );
+
+    return temp; // actual server-created Task will come after sync
+  }
+
+  Future<void> toggleDone(int id, bool done) async {
     final i = _items.indexWhere((t) => t.id == id);
     if (i < 0) return;
     final prev = _items[i];
-    final desired = !prev.done;
-    final optimistic = prev.copyWith(done: desired);
+    final optimistic = prev.copyWith(done: done);
 
-    debugPrint(
-      'PROVIDER → TaskProvider.toggleDone(id: $id) (optimistic: $desired)',
-    );
-
-    // 1) Optimistic apply (and persist)
     _items = List.of(_items)..[i] = optimistic;
     await _store.saveTasks(_items);
     notifyListeners();
 
-    // 2) Coalesce mutation for this id to the latest desired state
-    final clock = (_clocks[id] ?? 0) + 1;
-    _clocks[id] = clock;
-    final m = TaskMutation(id: id, done: desired, clock: clock);
-
-    _queue.removeWhere((q) => q.id == id);
-    _queue.add(m);
-    await _store.saveMutations(_queue.map((e) => e.toJson()).toList());
-
-    // 3) Kick sync loop
-    _syncMutations();
+    await _enqueue(
+      PendingOp(
+        opId: _uuid.v4(),
+        kind: PendingKind.toggle,
+        id: id.toString(),
+        payload: {'done': done, 'updated_at': DateTime.now().toIso8601String()},
+        ts: DateTime.now(),
+      ),
+    );
   }
 
-  // === Sync loop with exponential backoff + jitter ===
-  Future<void> _syncMutations() async {
-    if (_syncing || _queue.isEmpty) return;
-    _syncing = true;
-
-    try {
-      var delay = const Duration(milliseconds: 300);
-      final rnd = Random();
-
-      while (_queue.isNotEmpty) {
-        final m = _queue.first;
-
-        // Compose Task for service (we ignore server body; local is source of truth)
-        final current = _items.firstWhere(
-          (x) => x.id == m.id,
-          orElse: () => Task(id: m.id, title: 'Task ${m.id}', done: m.done),
-        );
-        final toSend = current.copyWith(done: m.done);
-
-        try {
-          await _service.toggleDone(toSend);
-          _queue.removeAt(0);
-          await _store.saveMutations(_queue.map((e) => e.toJson()).toList());
-          delay = const Duration(milliseconds: 300); // reset backoff
-        } catch (e) {
-          final sleep = delay + Duration(milliseconds: rnd.nextInt(250));
-          debugPrint('SYNC → retry ${m.key} in ${sleep.inMilliseconds}ms');
-          await Future.delayed(sleep);
-          delay *= 2;
-          if (delay > const Duration(seconds: 5)) {
-            debugPrint(
-              'SYNC → pausing; will retry later (queue=${_queue.length})',
-            );
-            break;
-          }
-        }
-      }
-    } finally {
-      _syncing = false;
-    }
-  }
-
-  // Helper to persist list locally (works with your LocalTaskStore)
-  Future<void> _persist() async {
-    try {
-      await _store.saveTasks(_items);
-    } catch (_) {
-      // ignore local persistence errors; UI already updated
-    }
-  }
-
-  /// Create a task (optimistic placeholder + rollback on failure)
-  Future<Task?> addTask(String title) async {
-    debugPrint('PROVIDER → TaskProvider.addTask("$title")');
-
-    // 1) Optimistic placeholder with a negative temp id to avoid collisions
-    final tempId = -DateTime.now().millisecondsSinceEpoch;
-    final temp = Task(id: tempId, title: title, done: false);
-    _items = [temp, ..._items];
-    await _persist();
-    notifyListeners();
-
-    try {
-      // 2) Server create (Supabase returns the row with a real id)
-      final created = await _service.create(title);
-
-      // 3) Replace placeholder with real row
-      final idx = _items.indexWhere((t) => t.id == tempId);
-      if (idx >= 0) {
-        _items = List.of(_items)..[idx] = created;
-      } else {
-        // (very unlikely) placeholder missing—prepend the created row
-        _items = [created, ..._items];
-      }
-      _error = null;
-      await _persist();
-      notifyListeners();
-      return created;
-    } catch (e) {
-      // 4) Rollback on failure
-      _items = _items.where((t) => t.id != tempId).toList(growable: false);
-      _error = e.toString();
-      await _persist();
-      notifyListeners();
-      return null;
-    }
-  }
-
-  /// Delete a task (optimistic remove + rollback on failure)
-  Future<void> removeTask(int id) async {
-    debugPrint('PROVIDER → TaskProvider.removeTask($id)');
-
-    // 1) Optimistic remove
+  Future<void> updateTitle(int id, String title) async {
     final i = _items.indexWhere((t) => t.id == id);
     if (i < 0) return;
-    final removed = _items[i];
-    _items = List.of(_items)..removeAt(i);
-    await _persist();
+    final optimistic = _items[i].copyWith(title: title);
+
+    _items = List.of(_items)..[i] = optimistic;
+    await _store.saveTasks(_items);
     notifyListeners();
 
-    try {
-      // 2) Server delete
-      await _service.delete(id);
-      _error = null;
-    } catch (e) {
-      // 3) Rollback on failure (insert back at original index)
-      _items = List.of(_items)..insert(i, removed);
-      _error = e.toString();
-      await _persist();
-      notifyListeners();
-    }
+    await _enqueue(
+      PendingOp(
+        opId: _uuid.v4(),
+        kind: PendingKind.update,
+        id: id.toString(),
+        payload: {
+          'title': title,
+          'updated_at': DateTime.now().toIso8601String(),
+        },
+        ts: DateTime.now(),
+      ),
+    );
+  }
+
+  Future<void> removeTask(int id) async {
+    final i = _items.indexWhere((t) => t.id == id);
+    if (i < 0) return;
+    //final removed = _items[i];
+    _items = List.of(_items)..removeAt(i);
+    await _store.saveTasks(_items);
+    notifyListeners();
+
+    await _enqueue(
+      PendingOp(
+        opId: _uuid.v4(),
+        kind: PendingKind.delete,
+        id: id.toString(),
+        payload: null,
+        ts: DateTime.now(),
+      ),
+    );
   }
 }
