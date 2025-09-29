@@ -8,6 +8,15 @@ import 'task_service.dart';
 import '../config/supabase_config.dart';
 import 'token_source.dart';
 
+import 'package:http/http.dart' as http;
+
+class Unauthorized401 implements Exception {
+  final String message;
+  Unauthorized401([this.message = 'Unauthorized']);
+  @override
+  String toString() => 'Unauthorized401: $message';
+}
+
 class TaskServiceHttp extends BaseService implements TaskService {
   final TokenSource _tokens;
 
@@ -21,11 +30,19 @@ class TaskServiceHttp extends BaseService implements TaskService {
     'Authorization': 'Bearer ${_tokens.token ?? kSupabaseAnonKey}',
   };
 
+  void _checkHttp(http.Response res) {
+    if (res.statusCode == 401) {
+      throw Unauthorized401();
+    }
+    // Keep your existing behavior for other errors
+    throwOnError(res);
+  }
+
   @override
   Future<List<Task>> fetch() async {
     debugPrint('HTTP CALL → TaskServiceHttp.fetch()');
     final res = await get(url('/tasks')).timeout(const Duration(seconds: 12));
-    throwOnError(res);
+    _checkHttp(res);
     final data = decodeJson<List>(res);
     return data.map((e) => Task.fromJson(e)).toList();
   }
@@ -46,7 +63,7 @@ class TaskServiceHttp extends BaseService implements TaskService {
         'updated_at': DateTime.now().toUtc().toIso8601String(),
       }),
     ).timeout(const Duration(seconds: 12));
-    throwOnError(res);
+    _checkHttp(res);
 
     final rows = decodeJson<List>(res);
     final map =
@@ -54,6 +71,27 @@ class TaskServiceHttp extends BaseService implements TaskService {
                 ? rows.first
                 : {'id': task.id, 'title': task.title, 'done': task.done})
             as Map<String, dynamic>;
+    return Task.fromJson(map);
+  }
+
+  /// Patch only the title; returns the updated row.
+  Future<Task> patchTitle(int id, String title) async {
+    debugPrint('HTTP CALL → TaskServiceHttp.patchTitle($id)');
+    final res = await patch(
+      url('/tasks', query: {'id': 'eq.$id'}),
+      headers: const {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Prefer': 'return=representation',
+      },
+      body: jsonEncode({
+        'title': title,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      }),
+    ).timeout(const Duration(seconds: 12));
+    _checkHttp(res);
+
+    final rows = decodeJson<List>(res);
+    final map = rows.first as Map<String, dynamic>;
     return Task.fromJson(map);
   }
 
@@ -73,7 +111,7 @@ class TaskServiceHttp extends BaseService implements TaskService {
         'updated_at': DateTime.now().toUtc().toIso8601String(),
       }),
     ).timeout(const Duration(seconds: 12));
-    throwOnError(res);
+    _checkHttp(res);
 
     final rows = decodeJson<List>(res);
     final map = rows.first as Map<String, dynamic>;
@@ -89,6 +127,6 @@ class TaskServiceHttp extends BaseService implements TaskService {
       url('/tasks', query: {'id': 'eq.$id'}),
       headers: const {'Prefer': 'return=representation'}, // optional
     ).timeout(const Duration(seconds: 12));
-    throwOnError(res);
+    _checkHttp(res);
   }
 }

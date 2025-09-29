@@ -35,6 +35,16 @@ class TaskProvider extends ChangeNotifier {
   String? get error => _error;
   UnmodifiableListView<Task> get items => UnmodifiableListView(_items);
 
+  /// Back-compat for older UI: p.toggle(task)
+  Future<void> toggle(Task task) => toggleDone(task.id, !task.done);
+
+  /// Handy if you only have an id in scope
+  Future<void> toggleById(int id) {
+    final i = _items.indexWhere((t) => t.id == id);
+    if (i < 0) return Future.value();
+    return toggleDone(id, !_items[i].done);
+  }
+
   Future<void> load({bool force = false}) async {
     if (_initialized && !force) return;
 
@@ -142,12 +152,8 @@ class TaskProvider extends ChangeNotifier {
     debugPrint('PROVIDER → TaskProvider.addTask("$title")');
 
     // Optimistic placeholder
-    final tempId = 'tmp_${_uuid.v4()}';
-    final temp = Task(
-      id: -DateTime.now().millisecondsSinceEpoch,
-      title: title,
-      done: false,
-    );
+    final tempInt = -DateTime.now().millisecondsSinceEpoch;
+    final temp = Task(id: tempInt, title: title, done: false);
     _items = [temp, ..._items];
     await _store.saveTasks(_items);
     notifyListeners();
@@ -157,7 +163,7 @@ class TaskProvider extends ChangeNotifier {
       PendingOp(
         opId: _uuid.v4(),
         kind: PendingKind.create,
-        id: tempId,
+        id: tempInt.toString(),
         payload: {
           'title': title,
           'done': false,
@@ -215,13 +221,16 @@ class TaskProvider extends ChangeNotifier {
   }
 
   Future<void> removeTask(int id) async {
+    debugPrint('PROVIDER → TaskProvider.removeTask($id)');
+
+    // 1) Optimistic remove
     final i = _items.indexWhere((t) => t.id == id);
     if (i < 0) return;
-    //final removed = _items[i];
     _items = List.of(_items)..removeAt(i);
     await _store.saveTasks(_items);
     notifyListeners();
 
+    // 2) Enqueue delete (durable WAL) and kick sync
     await _enqueue(
       PendingOp(
         opId: _uuid.v4(),

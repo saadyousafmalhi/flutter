@@ -58,7 +58,7 @@ class AppRoot extends StatelessWidget {
 
             final sync = SyncManager(
               taskService: taskService,
-              tokenSource: auth,
+              auth: auth,
               store: store,
             );
 
