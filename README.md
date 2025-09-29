@@ -54,12 +54,12 @@ It demonstrates how to combine **local persistence, write-ahead logging (WAL), a
 
 ```mermaid
 flowchart TD
-    UI[Flutter UI] --> Provider
-    Provider --> LocalStore[LocalTaskStore]
-    LocalStore --> WAL[Pending Operations (WAL)]
-    WAL --> SyncManager
-    SyncManager -->|Replay| API[TaskServiceHttp / Backend]
-    AuthProvider --> SyncManager
+  UI[Flutter UI] --> P[Provider]
+  P --> LS[LocalTaskStore]
+  LS --> WALQ[Pending Ops - WAL]
+  WALQ --> SM[SyncManager]
+  SM --> API[TaskServiceHttp + Server]
+  AP[AuthProvider] --> SM
 ```
 
 ---
