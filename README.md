@@ -1,7 +1,23 @@
-# Iradon – Offline-First Task Manager (Flutter)
+# 📱 Iradon
+![CI](https://github.com/saadyousafmalhi/flutter/actions/workflows/ci.yml/badge.svg)
+[![Release](https://img.shields.io/github/v/release/saadyousafmalhi/flutter)](https://github.com/saadyousafmalhi/flutter/releases/latest)
 
-Iradon is a **task manager app built with Flutter** that explores resilient, offline-first design patterns.  
-The goal is not just to make another todo app, but to **demonstrate how to build mobile apps that work reliably with poor or intermittent networks**.
+# Iradon – Offline-First Task Manager in Flutter  
+
+**Iradon** is a Flutter application designed as an **engineering case study in offline-first architecture**.  
+It demonstrates how to combine **local persistence, write-ahead logging (WAL), and sync management** to deliver a seamless user experience in unreliable network conditions.  
+
+👉 [Download the latest APK](https://github.com/saadyousafmalhi/flutter/releases/latest)
+
+---
+
+## 📸 Screenshots
+
+<p align="center">
+  <img src="docs/assets/login.png" alt="Login" width="220"/>
+  <img src="docs/assets/tasks.png" alt="Task List" width="220"/>
+  <img src="docs/assets/darkmode.png" alt="Dark Mode" width="220"/>
+</p>
 
 ---
 
@@ -16,7 +32,7 @@ The goal is not just to make another todo app, but to **demonstrate how to build
 
 ---
 
-## 🏗 Architecture
+## 🏗️ Architecture
 
 ```mermaid
 flowchart TD
@@ -54,17 +70,38 @@ flowchart TD
 
 ---
 
-## 🔮 Roadmap
+## 🚀 Getting Started
 
-- Conflict resolution for multi-device sync  
-- UI indicators for “syncing” vs “committed”  
-- Unit tests for WAL + SyncManager  
-- CI/CD with GitHub Actions for tagged releases  
+### Prerequisites
+- [Flutter SDK](https://docs.flutter.dev/get-started/install)
+- Android Studio / Xcode (emulator or real device)
+
+### Run locally
+```bash
+flutter pub get
+flutter run
+```
 
 ---
 
-## 📂 Repo
+## 🏗️ Build Release
 
-👉 [github.com/saadyousafmalhi/flutter](https://github.com/saadyousafmalhi/flutter)
+```bash
+flutter build apk --release
+flutter build appbundle --release
+```
+
+---
+
+## 🔄 CI/CD
+
+- **CI Workflow** → runs analyzer + tests on every push  
+- **CD Workflow** → on `main` or when tagging `v*`, builds signed APK & AAB and attaches them to GitHub Releases  
+
+---
+
+## 📜 Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md) for detailed release history.
 
 ---
