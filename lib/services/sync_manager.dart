@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart';
 
 import '../models/pending_op.dart';
 import '../models/task.dart';
+import '../models/sync_event.dart'; // <-- NEW
+
 import 'local_task_store.dart';
 import '../providers/auth_provider.dart';
 import 'task_service_http.dart';
@@ -18,6 +20,9 @@ class SyncManager {
   bool _draining = false;
   Timer? _debounce;
   final Random _rng;
+
+  final _events = StreamController<SyncEvent>.broadcast();
+  Stream<SyncEvent> get events => _events.stream;
 
   SyncManager({
     required this.taskService,
@@ -135,6 +140,12 @@ class SyncManager {
     final remapped = _remapIds(ops, fromId: op.id, toId: created.id.toString());
     remapped.removeAt(0); // pop processed create
     await store.saveQueue(remapped);
+
+    // Notify UI: temp -> real committed
+    final tempId = int.tryParse(op.id);
+    if (tempId != null) {
+      _events.add(CreateCommitted(tempId, created));
+    }
   }
 
   Future<void> _handleToggle(PendingOp op, List<PendingOp> ops) async {
@@ -160,6 +171,9 @@ class SyncManager {
 
     ops.removeAt(0);
     await store.saveQueue(ops);
+
+    // Notify UI: update committed
+    _events.add(UpdateCommitted(updated));
   }
 
   Future<void> _handleDelete(PendingOp op, List<PendingOp> ops) async {
@@ -178,6 +192,9 @@ class SyncManager {
 
     ops.removeAt(0);
     await store.saveQueue(ops);
+
+    // Notify UI: delete committed
+    _events.add(DeleteCommitted(id));
   }
 
   // --- helpers ---

@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 
 import '../models/task.dart';
 import '../models/pending_op.dart';
+import '../models/sync_event.dart'; // so it knows CreateCommitted, etc.
 import '../services/task_service_http.dart';
 import '../services/local_task_store.dart';
 import '../services/sync_manager.dart';
@@ -14,7 +15,10 @@ class TaskProvider extends ChangeNotifier {
   final LocalTaskStore _store;
   late SyncManager _sync; // injected from main.dart
 
-  TaskProvider(this._service, this._store);
+  TaskProvider(this._service, this._store, this._sync) {
+    // 👇 subscribe once, as soon as provider is constructed
+    _sync.events.listen(_onSyncEvent);
+  }
 
   void attachSync(SyncManager sync) {
     _sync = sync;
@@ -43,6 +47,33 @@ class TaskProvider extends ChangeNotifier {
     final i = _items.indexWhere((t) => t.id == id);
     if (i < 0) return Future.value();
     return toggleDone(id, !_items[i].done);
+  }
+
+  Future<void> _onSyncEvent(SyncEvent e) async {
+    if (e is CreateCommitted) {
+      final i = _items.indexWhere((t) => t.id == e.tempId);
+      if (i >= 0) {
+        _items = List.of(_items)..[i] = e.real;
+      } else {
+        _items = [..._items, e.real];
+      }
+      await _store.saveTasks(_items);
+      notifyListeners();
+    } else if (e is UpdateCommitted) {
+      final i = _items.indexWhere((t) => t.id == e.real.id);
+      if (i >= 0) {
+        _items = List.of(_items)..[i] = e.real;
+        await _store.saveTasks(_items);
+        notifyListeners();
+      }
+    } else if (e is DeleteCommitted) {
+      final before = _items.length;
+      _items = _items.where((t) => t.id != e.id).toList(growable: false);
+      if (_items.length != before) {
+        await _store.saveTasks(_items);
+        notifyListeners();
+      }
+    }
   }
 
   Future<void> load({bool force = false}) async {

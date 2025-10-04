@@ -65,6 +65,7 @@ class AppRoot extends StatelessWidget {
             final taskProv = TaskProvider(
               taskService,
               store,
+              sync,
             ); // ✅ store required
             taskProv.attachSync(sync);
             return taskProv;
